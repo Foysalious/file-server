@@ -30,7 +30,7 @@ export class LocalFileServerService implements FilerServerInterface {
 
     async delete(privateKey: string) {
         if (privateKey.match(/^[0-9a-fA-F]{24}$/)) {
-            const res = await this.localFileServerRepository.findOne({ _id: new mongodb.ObjectId(privateKey),client: 'local' })
+            const res = await this.localFileServerRepository.findOne({ _id: new mongodb.ObjectId(privateKey), client: 'local' })
             if (res == undefined) { throw new NotFoundException("File not found") }
             unlinkSync(res.path)
             await this.localFileServerRepository.delete({ _id: new mongodb.ObjectId(privateKey) })
@@ -41,12 +41,13 @@ export class LocalFileServerService implements FilerServerInterface {
 
     }
 
+    //As it its not described in the documentation on which basis have to delete files so i am deleteing files after 3 days
     @Cron(CronExpression.EVERY_DAY_AT_1AM)
     async removePreviousNotification() {
         const date = new Date();
         date.setDate(date.getDate() - 3);
         const data = await this.localFileServerRepository.find({
-            where: { created_at: { $lt: date } },
+            where: { created_at: { $lt: date }, client: 'local' },
         });
         for (let i = 0; i < data.length; i++) {
             this.delete(data[i]._id)

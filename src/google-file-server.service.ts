@@ -6,12 +6,11 @@ import { FilerServerInterface } from './interface/file-server.interface';
 import { LocalFileServerRepository } from './app.repository';
 import * as mongodb from "mongodb";
 import { GoogleCloudCredential } from './constants/google-cloud-credential';
+import { Cron, CronExpression } from '@nestjs/schedule';
 const { Storage } = require('@google-cloud/storage');
-
+//Couldn't check this file properly because of unavailable google-cloud-storage and internatrional card
 export class GoogleFileServerService implements FilerServerInterface {
-    constructor(private localFileServerRepository: LocalFileServerRepository) {
-
-    }
+    constructor(private localFileServerRepository: LocalFileServerRepository) { }
 
     async upload(file: Express.Multer.File) {
         const base64 = file.buffer.toString('base64');
@@ -51,4 +50,16 @@ export class GoogleFileServerService implements FilerServerInterface {
         }
     }
 
+    //As it its not described in the documentation on which basis have to delete files so i am deleteing files after 3 days
+    @Cron(CronExpression.EVERY_DAY_AT_1AM)
+    async removePreviousNotification() {
+        const date = new Date();
+        date.setDate(date.getDate() - 3);
+        const data = await this.localFileServerRepository.find({
+            where: { created_at: { $lt: date }, client: 'local' },
+        });
+        for (let i = 0; i < data.length; i++) {
+            this.delete(data[i]._id)
+        }
+    }
 }
