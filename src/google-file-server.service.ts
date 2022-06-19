@@ -31,7 +31,13 @@ export class GoogleFileServerService implements FilerServerInterface {
     }
 
     async get(publicKey: number) {
-        const res = await this.localFileServerRepository.findOne({ public_id: Number(publicKey), client: 'google' })
+        const res = await this.localFileServerRepository.findOne({
+            where: {
+                public_id: Number(publicKey),
+                client: 'google',
+
+            }
+        });
         if (res == undefined) { throw new NotFoundException("File not found") }
         const storage = new Storage()
         return await storage.bucket(GoogleCloudCredential.bucketName).download(res.path);
@@ -39,7 +45,13 @@ export class GoogleFileServerService implements FilerServerInterface {
 
     async delete(privateKey: string) {
         if (privateKey.match(/^[0-9a-fA-F]{24}$/)) {
-            const res = await this.localFileServerRepository.findOne({ _id: new mongodb.ObjectId(privateKey), client: 'google' })
+            const res = await this.localFileServerRepository.findOne({
+                where: {
+                    _id: new mongodb.ObjectId(privateKey),
+                    client: 'google',
+
+                }
+            });
             if (res == undefined) { throw new NotFoundException("File not found") }
             const storage = new Storage()
             await storage.bucket(GoogleCloudCredential.bucketName).file(res.path).delete();

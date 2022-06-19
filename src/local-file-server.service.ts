@@ -1,7 +1,7 @@
 import { HttpException, HttpStatus, Injectable, NotFoundException, UseInterceptors } from '@nestjs/common';
 import path = require('path');
 import { v4 as uuidv4 } from 'uuid';
-import { unlinkSync, writeFile } from 'fs';
+import { unlinkSync, writeFile, existsSync, mkdirSync } from 'fs';
 import { FilerServerInterface } from './interface/file-server.interface';
 import { LocalFileServerRepository } from './app.repository';
 import * as mongodb from "mongodb";
@@ -14,6 +14,11 @@ export class LocalFileServerService implements FilerServerInterface {
         const fileName: string = path.parse(file.originalname).name.replace(/\s/g, '') + uuidv4()
         const extension: string = path.parse(file.originalname).ext;
         const fullFilePath = process.env.FOLDER + "/" + fileName + extension
+        if (!existsSync(process.env.FOLDER)) {
+            mkdirSync(process.env.FOLDER, {
+                recursive: true
+            });
+        }
         writeFile(fullFilePath, base64, 'base64', function (err) {
             if (err) {
                 console.log(err)
@@ -23,14 +28,26 @@ export class LocalFileServerService implements FilerServerInterface {
     }
 
     async get(publicKey: number) {
-        const res = await this.localFileServerRepository.findOne({ public_id: Number(publicKey), client: 'local' })
+        const res = await this.localFileServerRepository.findOne({
+            where: {
+                public_id: Number(publicKey),
+                client: 'local',
+
+            }
+        });
         if (res == undefined) { throw new NotFoundException("File not found") }
         return res.path
     }
 
     async delete(privateKey: string) {
         if (privateKey.match(/^[0-9a-fA-F]{24}$/)) {
-            const res = await this.localFileServerRepository.findOne({ _id: new mongodb.ObjectId(privateKey), client: 'local' })
+            const res = await this.localFileServerRepository.findOne({
+                where: {
+                    _id: new mongodb.ObjectId(privateKey),
+                    client: 'local',
+
+                }
+            });
             if (res == undefined) { throw new NotFoundException("File not found") }
             unlinkSync(res.path)
             await this.localFileServerRepository.delete({ _id: new mongodb.ObjectId(privateKey) })

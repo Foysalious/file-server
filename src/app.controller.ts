@@ -25,7 +25,7 @@ export class AppController {
   }
 
   @Delete('DELETE/files/:privateKey')
-  async deleteFile(@Param('privateKey') privateKey: string, @Res() response: Response) {
+  async deleteFile(@Param('privateKey') privateKey: string, @Res() response?: Response) {
     await this.appService.deleteFile(privateKey,process.env.PROVIDER);
     return response.send({ message: "File deleted" });
   }
